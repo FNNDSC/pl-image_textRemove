@@ -1,6 +1,6 @@
-# My ChRIS Plugin
+# pl-image_textRemove
 
-[![Version](https://img.shields.io/docker/v/fnndsc/pl-image_textRemove?sort=semver)](https://hub.docker.com/r/fnndsc/pl-image_textRemove)
+[![Version](https://img.shields.io/docker/v/fnndsc/pl-image_textremove?sort=semver)](https://hub.docker.com/r/fnndsc/pl-image_textRemove)
 [![MIT License](https://img.shields.io/github/license/fnndsc/pl-image_textRemove)](https://github.com/FNNDSC/pl-image_textRemove/blob/main/LICENSE)
 [![ci](https://github.com/FNNDSC/pl-image_textRemove/actions/workflows/ci.yml/badge.svg)](https://github.com/FNNDSC/pl-image_textRemove/actions/workflows/ci.yml)
 
