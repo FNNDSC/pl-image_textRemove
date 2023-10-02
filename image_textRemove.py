@@ -12,13 +12,11 @@ from chris_plugin import chris_plugin, PathMapper
 __version__ = '1.0.0'
 
 DISPLAY_TITLE = r"""
-ChRIS Plugin Template Title
+ChRIS Plugin to remove texts from images
 """
 
 
-parser = ArgumentParser(description='!!!CHANGE ME!!! An example ChRIS plugin which '
-                                    'counts the number of occurrences of a given '
-                                    'word in text files.',
+parser = ArgumentParser(description='A ChRIS plugin to remove text from images',
                         formatter_class=ArgumentDefaultsHelpFormatter)
 parser.add_argument('-V', '--version', action='version',
                     version=f'%(prog)s {__version__}')
