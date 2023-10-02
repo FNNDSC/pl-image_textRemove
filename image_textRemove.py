@@ -3,7 +3,6 @@
 from pathlib import Path
 from argparse import ArgumentParser, Namespace, ArgumentDefaultsHelpFormatter
 import matplotlib.pyplot as plt
-import keras_ocr
 import cv2
 import math
 import numpy as np
@@ -20,6 +19,10 @@ parser = ArgumentParser(description='A ChRIS plugin to remove text from images',
                         formatter_class=ArgumentDefaultsHelpFormatter)
 parser.add_argument('-V', '--version', action='version',
                     version=f'%(prog)s {__version__}')
+parser.add_argument('-p', '--pattern', default='**/*.txt', type=str,
+                    help='input file filter glob')
+parser.add_argument('-r', '--removeAll', default=False,action="store_true",
+                    help='input file filter glob')
 
 
 # The main function of this *ChRIS* plugin is denoted by this ``@chris_plugin`` "decorator."
@@ -54,15 +57,16 @@ def main(options: Namespace, inputdir: Path, outputdir: Path):
     #
     # Refer to the documentation for more options, examples, and advanced uses e.g.
     # adding a progress bar and parallelism.
-    mapper = PathMapper.file_mapper(inputdir, outputdir, glob="dcm")
+    mapper = PathMapper.file_mapper(inputdir, outputdir, glob=options.pattern)
     for input_file, output_file in mapper:
         # The code block below is a small and easy example of how to use a ``PathMapper``.
         # It is recommended that you put your functionality in a helper function, so that
         # it is more legible and can be unit tested.
-        pipeline = keras_ocr.pipeline.Pipeline()
-        final_image = inpaint_text(input_file, pipeline)
+
+        final_image = inpaint_text(str(input_file), options.removeAll)
         img_rgb = cv2.cvtColor(final_image, cv2.COLOR_BGR2RGB)
-        cv2.imwrite(output_file, img_rgb)
+        print(f"Saving output file as {output_file}")
+        cv2.imwrite(str(output_file), img_rgb)
 
 
 
@@ -71,14 +75,37 @@ def midpoint(x1, y1, x2, y2):
     y_mid = int((y1 + y2) / 2)
     return x_mid, y_mid
 
-def inpaint_text(img_path, pipeline):
+def inpaint_text(img_path, remove_all):
+    box_list = [('fname', [[75.661415, 12.579701],
+                           [159.15764, 15.109892],
+                           [158.6009, 33.481747],
+                           [75.10469, 30.951557]]),
+                ('lname', [[159.19453, 15.235459],
+                           [224.91228, 12.314666],
+                           [225.73787, 30.890816],
+                           [160.02013, 33.811607]]),
+                ('MRN', [[75.43749, 36.60937],
+                         [148.65622, 36.60937],
+                         [148.65622, 53.249996],
+                         [75.43749, 53.249996]]),
+                ('DOB', [[401.59375, 14.421875],
+                         [499.21875, 14.421875],
+                         [499.21875, 32.171875],
+                         [401.59375, 32.171875]])]
     # read image
-    img = keras_ocr.tools.read(img_path)
-    # generate (word, box) tuples
-    prediction_groups = pipeline.recognize([img])
+    print(f"Reading input file from {img_path}")
+    img = cv2.imread(img_path)
+
+    print("Removing fname, lname, MRN, DoB")
+    if remove_all:
+        print("Removing all texts")
+        import keras_ocr
+        pipeline = keras_ocr.pipeline.Pipeline()
+        # generate (word, box) tuples
+        box_list = pipeline.recognize([img])[0]
 
     mask = np.zeros(img.shape[:2], dtype="uint8")
-    for box in prediction_groups[0]:
+    for box in box_list:
             x0, y0 = box[1][0]
             x1, y1 = box[1][1]
             x2, y2 = box[1][2]
