@@ -8,7 +8,7 @@ import math
 import numpy as np
 from chris_plugin import chris_plugin, PathMapper
 
-__version__ = '1.0.0'
+__version__ = '0.2.0'
 
 DISPLAY_TITLE = r"""
 ChRIS Plugin to remove texts from images
@@ -22,7 +22,7 @@ parser.add_argument('-V', '--version', action='version',
 parser.add_argument('-p', '--pattern', default='**/*.txt', type=str,
                     help='input file filter glob')
 parser.add_argument('-r', '--removeAll', default=False,action="store_true",
-                    help='input file filter glob')
+                    help='Remove all texts from image using text recognition model')
 
 
 # The main function of this *ChRIS* plugin is denoted by this ``@chris_plugin`` "decorator."

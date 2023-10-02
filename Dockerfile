@@ -21,4 +21,4 @@ RUN pip install ".[${extras_require}]" \
     && cd / && rm -rf ${SRCDIR}
 WORKDIR /
 
-CMD ["app"]
+CMD ["image_textRemove"]
