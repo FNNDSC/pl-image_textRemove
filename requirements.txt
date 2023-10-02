@@ -1,2 +1,5 @@
 chris_plugin==0.2.1
+matplotlib
+keras_ocr
+tensorflow
 

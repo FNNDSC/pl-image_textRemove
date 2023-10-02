@@ -19,18 +19,18 @@ def get_version(rel_path: str) -> str:
 
 
 setup(
-    name='chris-plugin-template',
+    name='image_textRemove',
     version=get_version('app.py'),
-    description='A ChRIS DS plugin template',
+    description='A ChRIS plugin to do something awesome',
     author='FNNDSC',
     author_email='dev@babyMRI.org',
-    url='https://github.com/FNNDSC/python-chrisapp-template',
+    url='https://github.com/FNNDSC/pl-image_textRe',
     py_modules=['app'],
     install_requires=['chris_plugin'],
     license='MIT',
     entry_points={
         'console_scripts': [
-            'commandname = app:main'
+            'app = app:main'
         ]
     },
     classifiers=[
