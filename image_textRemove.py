@@ -2,13 +2,12 @@
 
 from pathlib import Path
 from argparse import ArgumentParser, Namespace, ArgumentDefaultsHelpFormatter
-import matplotlib.pyplot as plt
 import cv2
 import math
 import numpy as np
 from chris_plugin import chris_plugin, PathMapper
 
-__version__ = '0.2.1'
+__version__ = '0.2.2'
 
 DISPLAY_TITLE = r"""
        _        _                             _            _  ______                              
@@ -109,11 +108,11 @@ def inpaint_text(img_path, remove_all):
 
     print("Removing fname, lname, MRN, DoB")
     if remove_all:
-        print("Removing all texts")
-        import keras_ocr
-        pipeline = keras_ocr.pipeline.Pipeline()
-        # generate (word, box) tuples
-        box_list = pipeline.recognize([img])[0]
+        print("Place holder to use keras OCR(WIP)")
+        # import keras_ocr
+        # pipeline = keras_ocr.pipeline.Pipeline()
+        # # generate (word, box) tuples
+        # box_list = pipeline.recognize([img])[0]
 
     mask = np.zeros(img.shape[:2], dtype="uint8")
     for box in box_list:

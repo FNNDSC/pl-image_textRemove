@@ -5,19 +5,20 @@ FROM docker.io/python:3.11.0-slim-bullseye
 
 LABEL org.opencontainers.image.authors="FNNDSC <dev@babyMRI.org>" \
       org.opencontainers.image.title="My ChRIS Plugin" \
-      org.opencontainers.image.description="A ChRIS plugin to do something awesome"
+      org.opencontainers.image.description="A ChRIS plugin to remove texts from image"
 
 ARG SRCDIR=/usr/local/src/pl-image_textRemove
 WORKDIR ${SRCDIR}
 
 COPY requirements.txt .
 RUN pip install -r requirements.txt
+RUN apt-get update
+RUN apt-get install ffmpeg libsm6 libxext6  -y
 
 COPY . .
 ARG extras_require=none
 
 RUN pip install ".[${extras_require}]" \
-    && apt update && apt -y install ffmpeg libsm6 libxext6 \
     && cd / && rm -rf ${SRCDIR}
 WORKDIR /
 
