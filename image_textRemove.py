@@ -7,7 +7,7 @@ import math
 import numpy as np
 from chris_plugin import chris_plugin, PathMapper
 
-__version__ = '0.2.2'
+__version__ = '0.2.3'
 
 DISPLAY_TITLE = r"""
        _        _                             _            _  ______                              
@@ -86,22 +86,14 @@ def midpoint(x1, y1, x2, y2):
 def inpaint_text(img_path, remove_all):
     # Currently we have hardcoded the box coordinates for
     # first name, last name, MRN and DOB
-    box_list = [('fname', [[75.661415, 12.579701],
-                           [159.15764, 15.109892],
-                           [158.6009, 33.481747],
+    box_list = [('name&DoB', [[75.661415, 12.579701],
+                           [499.21875, 14.421875],
+                           [499.21875, 32.171875],
                            [75.10469, 30.951557]]),
-                ('lname', [[159.19453, 15.235459],
-                           [224.91228, 12.314666],
-                           [225.73787, 30.890816],
-                           [160.02013, 33.811607]]),
                 ('MRN', [[75.43749, 36.60937],
                          [148.65622, 36.60937],
                          [148.65622, 53.249996],
-                         [75.43749, 53.249996]]),
-                ('DOB', [[401.59375, 14.421875],
-                         [499.21875, 14.421875],
-                         [499.21875, 32.171875],
-                         [401.59375, 32.171875]])]
+                         [75.43749, 53.249996]])]
     # read image
     print(f"Reading input file from ---->{img_path}<----")
     img = cv2.imread(img_path)
