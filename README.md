@@ -5,12 +5,16 @@
 [![ci](https://github.com/FNNDSC/pl-image_textRemove/actions/workflows/ci.yml/badge.svg)](https://github.com/FNNDSC/pl-image_textRemove/actions/workflows/ci.yml)
 
 `pl-image_textRemove` is a [_ChRIS_](https://chrisproject.org/)
-_ds_ plugin which takes in ...  as input files and
-creates ... as output files.
+_ds_ plugin which takes in image files  as input files and
+removes any burned text on those images
 
 ## Abstract
 
-...
+Currently, the plugin `pl-image_textRemove` can take ultra sound images as input and remove specific text, i.e. 
+Patient Name, MRN, and DoB burned on the images. We are working on making this plugin more generic where we can 
+remove specific/all texts from an input image by passing a choice of CLI commands. Under the hood, this plugin uses
+`keras_ocr` libraries to recognize text from an image file, and `opencv-python` to mask and inpaint resultant o/p
+files.
 
 ## Installation
 
@@ -25,13 +29,13 @@ To get started with local command-line usage, use [Apptainer](https://apptainer.
 (a.k.a. Singularity) to run `pl-image_textRemove` as a container:
 
 ```shell
-apptainer exec docker://fnndsc/pl-image_textRemove app [--args values...] input/ output/
+apptainer exec docker://fnndsc/pl-image_textRemove image_textRemove [--args values...] input/ output/
 ```
 
 To print its available options, run:
 
 ```shell
-apptainer exec docker://fnndsc/pl-image_textRemove app --help
+apptainer exec docker://fnndsc/pl-image_textRemove image_textRemove --help
 ```
 
 ## Examples
@@ -66,7 +70,7 @@ Mount the source code `app.py` into a container to try out changes without rebui
 docker run --rm -it --userns=host -u $(id -u):$(id -g) \
     -v $PWD/app.py:/usr/local/lib/python3.11/site-packages/app.py:ro \
     -v $PWD/in:/incoming:ro -v $PWD/out:/outgoing:rw -w /outgoing \
-    localhost/fnndsc/pl-image_textRemove app /incoming /outgoing
+    localhost/fnndsc/pl-image_textRemove image_textRemove /incoming /outgoing
 ```
 
 ### Testing
@@ -87,7 +91,7 @@ This section is about how to do those steps manually.
 
 ### Increase Version Number
 
-Increase the version number in `setup.py` and commit this file.
+Increase the version number in `image_textRemove.py` and commit this file.
 
 ### Push Container Image
 
