@@ -16,7 +16,7 @@
 
 PLUGIN_NAME="$(basename $(dirname $(realpath $0)))"  # name of current directory
 PLUGIN_TITLE='My ChRIS Plugin'
-SCRIPT_NAME='app'
+SCRIPT_NAME='image_textRemove'
 DESCRIPTION='A ChRIS plugin to do something awesome'
 ORGANIZATION='FNNDSC'
 EMAIL='dev@babyMRI.org'
@@ -30,7 +30,7 @@ EMAIL='dev@babyMRI.org'
 
 # Automatically test on Github Actions each time you run `git push`
 # If the value is "no" then tests are not performed. There are no side effects.
-ENABLE_ACTIONS_TEST=yes
+ENABLE_ACTIONS_TEST=no
 # Automatically build images on Github Actions each time you run `git push`,
 # and also publish to https://chrisstore.co each time you run `git push --tags`
 # If the value is "no" then builds will not be automated.
