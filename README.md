@@ -40,14 +40,14 @@ apptainer exec docker://fnndsc/pl-image_textRemove image_textRemove --help
 
 ## Examples
 
-`app` requires two positional arguments: a directory containing
+`image_textRemove` requires two positional arguments: a directory containing
 input data, and a directory where to create output data.
 First, create the input directory and move input data into it.
 
 ```shell
 mkdir incoming/ outgoing/
 mv some.dat other.dat incoming/
-apptainer exec docker://fnndsc/pl-image_textRemove:latest app [--args] incoming/ outgoing/
+apptainer exec docker://fnndsc/pl-image_textRemove:latest image_textRemove [--args] incoming/ outgoing/
 ```
 
 ## Development
@@ -64,7 +64,7 @@ docker build -t localhost/fnndsc/pl-image_textRemove .
 
 ### Running
 
-Mount the source code `app.py` into a container to try out changes without rebuild.
+Mount the source code `image_textRemove.py` into a container to try out changes without rebuild.
 
 ```shell
 docker run --rm -it --userns=host -u $(id -u):$(id -g) \
