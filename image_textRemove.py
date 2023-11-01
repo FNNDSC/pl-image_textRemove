@@ -8,7 +8,7 @@ import numpy as np
 from chris_plugin import chris_plugin, PathMapper
 from pflog import pflog
 
-__version__ = '1.0.0'
+__version__ = '1.0.2'
 
 DISPLAY_TITLE = r"""
        _        _                             _            _  ______                              
@@ -31,6 +31,11 @@ parser.add_argument('-o', '--outputType', default='png', type=str,
                     help='output file type(only the extension)')
 parser.add_argument('-r', '--removeAll', default=False, action="store_true",
                     help='Remove all texts from image using text recognition model')
+parser.add_argument(  '--pftelDB',
+                    dest        = 'pftelDB',
+                    default     = '',
+                    type        = str,
+                    help        = 'optional pftel server DB path')
 
 
 # The main function of this *ChRIS* plugin is denoted by this ``@chris_plugin`` "decorator."
