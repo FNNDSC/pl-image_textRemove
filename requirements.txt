@@ -4,4 +4,3 @@ pflog==1.2.26
 pftel-client~=1.0.6
 keras-ocr==0.8.8
 tensorflow-cpu==2.14.0
-pydicom

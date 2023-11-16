@@ -7,7 +7,12 @@ import math
 import numpy as np
 from chris_plugin import chris_plugin, PathMapper
 from pflog import pflog
-import pydicom as dicom
+import keras_ocr
+import glob
+import json
+import math
+import os
+import sys
 
 __version__ = '1.0.2'
 
@@ -34,6 +39,8 @@ parser.add_argument('-r', '--removeAll', default=False, action="store_true",
                     help='Remove all texts from image using text recognition model')
 parser.add_argument('-l', '--textList', default='', type=str,
                     help='A list of texts to be removed')
+parser.add_argument('-j', '--filterTextFromJSON', default='', type=str,
+                    help='A dictionary of dicom tags and their values')
 parser.add_argument(  '--pftelDB',
                     dest        = 'pftelDB',
                     default     = '',
@@ -77,13 +84,17 @@ def main(options: Namespace, inputdir: Path, outputdir: Path):
     #
     # Refer to the documentation for more options, examples, and advanced uses e.g.
     # adding a progress bar and parallelism.
+    json_file_path = os.path.join(options.inputdir, options.filterTextFromJSON)
+    f = open(json_file_path, 'r')
+    data = json.load(f)
+
     mapper = PathMapper.file_mapper(inputdir, outputdir, glob=f"**/*.{options.fileFilter}")
     for input_file, output_file in mapper:
         # The code block below is a small and easy example of how to use a ``PathMapper``.
         # It is recommended that you put your functionality in a helper function, so that
         # it is more legible and can be unit tested.
 
-        final_image = inpaint_text(str(input_file), options.removeAll, options.textList, options.fileFilter)
+        final_image = inpaint_text(str(input_file), data)
         img_rgb = cv2.cvtColor(final_image, cv2.COLOR_BGR2RGB)
         output_file = str(output_file).replace(options.fileFilter, options.outputType)
         print(f"Saving output file as ----->{output_file}<-----\n\n")
@@ -96,7 +107,7 @@ def midpoint(x1, y1, x2, y2):
     return x_mid, y_mid
 
 
-def inpaint_text(img_path, remove_all, words_list, img_type):
+def inpaint_text(img_path, data):
     img = None
     # Currently we have hardcoded the box coordinates for
     # first name, last name, MRN and DOB
@@ -110,19 +121,14 @@ def inpaint_text(img_path, remove_all, words_list, img_type):
                          [75.43749, 53.249996]])]
     # read image
     print(f"Reading input file from ---->{img_path}<----")
-    if img_type == 'dcm':
-        ds = read_input_dicom(img_path)
-        img = ds.pixel_array
-    else:
-        img = cv2.imread(img_path)
+    img = cv2.imread(img_path)
+    print(data)
 
     print("Removing fname, lname, MRN, DoB")
-    if remove_all:
-        print("Place holder to use keras OCR(WIP)")
-        import keras_ocr
-        pipeline = keras_ocr.pipeline.Pipeline()
-        # # generate (word, box) tuples
-        box_list = pipeline.recognize([img])[0]
+
+    pipeline = keras_ocr.pipeline.Pipeline()
+    # # generate (word, box) tuples
+    box_list = pipeline.recognize([img])[0]
 
     mask = np.zeros(img.shape[:2], dtype="uint8")
     for box in box_list:
