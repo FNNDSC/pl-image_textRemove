@@ -14,7 +14,7 @@ import math
 import os
 import sys
 
-__version__ = '1.0.2'
+__version__ = '1.0.4'
 
 DISPLAY_TITLE = r"""
        _        _                             _            _  ______                              
@@ -35,10 +35,6 @@ parser.add_argument('-f', '--fileFilter', default='png', type=str,
                     help='input file filter(only the extension)')
 parser.add_argument('-o', '--outputType', default='png', type=str,
                     help='output file type(only the extension)')
-parser.add_argument('-r', '--removeAll', default=False, action="store_true",
-                    help='Remove all texts from image using text recognition model')
-parser.add_argument('-l', '--textList', default='', type=str,
-                    help='A list of texts to be removed')
 parser.add_argument('-j', '--filterTextFromJSON', default='', type=str,
                     help='A dictionary of dicom tags and their values')
 parser.add_argument(  '--pftelDB',
@@ -108,23 +104,21 @@ def midpoint(x1, y1, x2, y2):
 
 
 def inpaint_text(img_path, data):
+    word_list = []
+    for item in data.keys():
+        if item == 'PatientName':
+            word_list.extend(data.get(item).split('^'))
+        elif item == 'PatientBirthDate':
+            yyyy = data.get(item)[0:4]
+            mm = data.get(item)[4:6]
+            dd = data.get(item)[6:8]
+            word_list.append(f'{mm}1{dd}1{yyyy}')
+        else:
+            word_list.append(data.get(item))
     img = None
-    # Currently we have hardcoded the box coordinates for
-    # first name, last name, MRN and DOB
-    box_list = [('name&DoB', [[75.661415, 12.579701],
-                           [499.21875, 14.421875],
-                           [499.21875, 32.171875],
-                           [75.10469, 30.951557]]),
-                ('MRN', [[75.43749, 36.60937],
-                         [148.65622, 36.60937],
-                         [148.65622, 53.249996],
-                         [75.43749, 53.249996]])]
     # read image
     print(f"Reading input file from ---->{img_path}<----")
     img = cv2.imread(img_path)
-    print(data)
-
-    print("Removing fname, lname, MRN, DoB")
 
     pipeline = keras_ocr.pipeline.Pipeline()
     # # generate (word, box) tuples
@@ -132,7 +126,8 @@ def inpaint_text(img_path, data):
 
     mask = np.zeros(img.shape[:2], dtype="uint8")
     for box in box_list:
-        if box[0] in words_list:
+        if box[0].upper() in word_list:
+            print(f"Removing {box[0].upper()} from image")
             x0, y0 = box[1][0]
             x1, y1 = box[1][1]
             x2, y2 = box[1][2]
