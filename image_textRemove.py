@@ -127,6 +127,7 @@ def inpaint_text(img_path, data):
     mask = np.zeros(img.shape[:2], dtype="uint8")
     for box in box_list:
         if box[0].upper() in word_list:
+            # Remove PatientName only
             print(f"Removing {box[0].upper()} from image")
             x0, y0 = box[1][0]
             x1, y1 = box[1][1]
