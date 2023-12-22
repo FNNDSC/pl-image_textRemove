@@ -14,7 +14,7 @@ import math
 import os
 import sys
 
-__version__ = '1.0.4'
+__version__ = '1.0.5'
 
 DISPLAY_TITLE = r"""
        _        _                             _            _  ______                              
@@ -35,7 +35,7 @@ parser.add_argument('-f', '--fileFilter', default='png', type=str,
                     help='input file filter(only the extension)')
 parser.add_argument('-o', '--outputType', default='png', type=str,
                     help='output file type(only the extension)')
-parser.add_argument('-j', '--filterTextFromJSON', default='', type=str,
+parser.add_argument('-j', '--filterTextFromJSON', default='**/*.json', type=str,
                     help='A dictionary of dicom tags and their values')
 parser.add_argument(  '--pftelDB',
                     dest        = 'pftelDB',
@@ -80,8 +80,9 @@ def main(options: Namespace, inputdir: Path, outputdir: Path):
     #
     # Refer to the documentation for more options, examples, and advanced uses e.g.
     # adding a progress bar and parallelism.
-    json_file_path = os.path.join(options.inputdir, options.filterTextFromJSON)
-    f = open(json_file_path, 'r')
+    json_str_glob = '%s/%s' % (options.inputdir, options.filterTextFromJSON)
+    l_json_datapath = glob.glob(json_str_glob, recursive=True)
+    f = open(l_json_datapath[0], 'r')
     data = json.load(f)
 
     mapper = PathMapper.file_mapper(inputdir, outputdir, glob=f"**/*.{options.fileFilter}")
