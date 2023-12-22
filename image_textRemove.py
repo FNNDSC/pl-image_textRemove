@@ -14,7 +14,7 @@ import math
 import os
 import sys
 
-__version__ = '1.0.5'
+__version__ = '1.0.6'
 
 DISPLAY_TITLE = r"""
        _        _                             _            _  ______                              
@@ -35,7 +35,7 @@ parser.add_argument('-f', '--fileFilter', default='png', type=str,
                     help='input file filter(only the extension)')
 parser.add_argument('-o', '--outputType', default='png', type=str,
                     help='output file type(only the extension)')
-parser.add_argument('-j', '--filterTextFromJSON', default='**/*.json', type=str,
+parser.add_argument('-j', '--filterTextFromJSON', default='anonymizedTags.json', type=str,
                     help='A dictionary of dicom tags and their values')
 parser.add_argument(  '--pftelDB',
                     dest        = 'pftelDB',
@@ -52,8 +52,8 @@ parser.add_argument(  '--pftelDB',
     parser=parser,
     title='Remove text from image',
     category='',  # ref. https://chrisstore.co/plugins
-    min_memory_limit='100Mi',  # supported units: Mi, Gi
-    min_cpu_limit='1000m',  # millicores, e.g. "1000m" = 1 CPU core
+    min_memory_limit='4Gi',  # supported units: Mi, Gi
+    min_cpu_limit='8000m',  # millicores, e.g. "1000m" = 1 CPU core
     min_gpu_limit=0  # set min_gpu_limit=1 to enable GPU
 )
 @pflog.tel_logTime(
@@ -80,18 +80,20 @@ def main(options: Namespace, inputdir: Path, outputdir: Path):
     #
     # Refer to the documentation for more options, examples, and advanced uses e.g.
     # adding a progress bar and parallelism.
-    json_str_glob = '%s/%s' % (options.inputdir, options.filterTextFromJSON)
-    l_json_datapath = glob.glob(json_str_glob, recursive=True)
-    f = open(l_json_datapath[0], 'r')
+    json_data_path=''
+    l_json_path = list(inputdir.glob('**/*.json'))
+    for json_path in l_json_path:
+        if json_path.name == options.filterTextFromJSON:
+            json_data_path = json_path
+    f = open(json_data_path, 'r')
     data = json.load(f)
-
+    box_list = []
     mapper = PathMapper.file_mapper(inputdir, outputdir, glob=f"**/*.{options.fileFilter}")
     for input_file, output_file in mapper:
         # The code block below is a small and easy example of how to use a ``PathMapper``.
         # It is recommended that you put your functionality in a helper function, so that
         # it is more legible and can be unit tested.
-
-        final_image = inpaint_text(str(input_file), data)
+        box_list, final_image = inpaint_text(str(input_file), data, box_list)
         img_rgb = cv2.cvtColor(final_image, cv2.COLOR_BGR2RGB)
         output_file = str(output_file).replace(options.fileFilter, options.outputType)
         print(f"Saving output file as ----->{output_file}<-----\n\n")
@@ -104,7 +106,7 @@ def midpoint(x1, y1, x2, y2):
     return x_mid, y_mid
 
 
-def inpaint_text(img_path, data):
+def inpaint_text(img_path, data, box_list):
     word_list = []
     for item in data.keys():
         if item == 'PatientName':
@@ -120,10 +122,11 @@ def inpaint_text(img_path, data):
     # read image
     print(f"Reading input file from ---->{img_path}<----")
     img = cv2.imread(img_path)
+    if not len(box_list):
+        pipeline = keras_ocr.pipeline.Pipeline()
+        # # generate (word, box) tuples
+        box_list = pipeline.recognize([img])[0]
 
-    pipeline = keras_ocr.pipeline.Pipeline()
-    # # generate (word, box) tuples
-    box_list = pipeline.recognize([img])[0]
 
     mask = np.zeros(img.shape[:2], dtype="uint8")
     for box in box_list:
@@ -144,7 +147,7 @@ def inpaint_text(img_path, data):
                  thickness)
             img = cv2.inpaint(img, mask, 7, cv2.INPAINT_NS)
 
-    return img
+    return box_list, img
 
 
 def read_input_dicom(input_file_path):
