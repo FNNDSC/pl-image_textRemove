@@ -14,7 +14,7 @@ import math
 import os
 import sys
 
-__version__ = '1.0.6'
+__version__ = '1.1.0'
 
 DISPLAY_TITLE = r"""
        _        _                             _            _  ______                              
@@ -88,7 +88,7 @@ def main(options: Namespace, inputdir: Path, outputdir: Path):
     f = open(json_data_path, 'r')
     data = json.load(f)
     box_list = []
-    mapper = PathMapper.file_mapper(inputdir, outputdir, glob=f"**/*.{options.fileFilter}")
+    mapper = PathMapper.file_mapper(inputdir, outputdir, glob=f"**/*.{options.fileFilter}", fail_if_empty=False)
     for input_file, output_file in mapper:
         # The code block below is a small and easy example of how to use a ``PathMapper``.
         # It is recommended that you put your functionality in a helper function, so that
@@ -126,6 +126,7 @@ def inpaint_text(img_path, data, box_list):
         pipeline = keras_ocr.pipeline.Pipeline()
         # # generate (word, box) tuples
         box_list = pipeline.recognize([img])[0]
+        print(box_list)
 
 
     mask = np.zeros(img.shape[:2], dtype="uint8")
