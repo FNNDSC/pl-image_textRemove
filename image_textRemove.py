@@ -14,7 +14,7 @@ import math
 import os
 import sys
 
-__version__ = '1.1.0'
+__version__ = '1.1.2'
 
 DISPLAY_TITLE = r"""
        _        _                             _            _  ______                              
@@ -85,8 +85,11 @@ def main(options: Namespace, inputdir: Path, outputdir: Path):
     for json_path in l_json_path:
         if json_path.name == options.filterTextFromJSON:
             json_data_path = json_path
-    f = open(json_data_path, 'r')
-    data = json.load(f)
+    try:
+        f = open(json_data_path, 'r')
+        data = json.load(f)
+    except Exception as ex:
+        print("Error: ",ex)
     box_list = []
     mapper = PathMapper.file_mapper(inputdir, outputdir, glob=f"**/*.{options.fileFilter}", fail_if_empty=False)
     for input_file, output_file in mapper:
