@@ -13,8 +13,9 @@ import json
 import math
 import os
 import sys
+from difflib import SequenceMatcher
 
-__version__ = '1.1.2'
+__version__ = '1.1.4'
 
 DISPLAY_TITLE = r"""
        _        _                             _            _  ______                              
@@ -121,7 +122,6 @@ def inpaint_text(img_path, data, box_list):
             word_list.append(f'{mm}1{dd}1{yyyy}')
         else:
             word_list.append(data.get(item))
-    img = None
     # read image
     print(f"Reading input file from ---->{img_path}<----")
     img = cv2.imread(img_path)
@@ -129,12 +129,11 @@ def inpaint_text(img_path, data, box_list):
         pipeline = keras_ocr.pipeline.Pipeline()
         # # generate (word, box) tuples
         box_list = pipeline.recognize([img])[0]
-        print(box_list)
 
 
     mask = np.zeros(img.shape[:2], dtype="uint8")
     for box in box_list:
-        if box[0].upper() in word_list:
+        if (box[0].upper() in word_list) or close_to_similar(box[0].upper(), word_list,0.8):
             # Remove PatientName only
             print(f"Removing {box[0].upper()} from image")
             x0, y0 = box[1][0]
@@ -166,6 +165,37 @@ def read_input_dicom(input_file_path):
         print(f"unable to read dicom file: {ex} \n")
         return None
     return ds
+
+
+def similar(a: str, b: str):
+    """
+    Return a similarity ration between two strings
+
+    Examples:
+    In [4]: similar("Apple","Appel")
+    Out[4]: 0.8
+
+    In [5]: similar("apple","apple")
+    Out[5]: 1.0
+
+    In [6]: similar("20/12/2024","2011212024")
+    Out[6]: 0.8
+
+    In [7]: similar("apple","dimple")
+    Out[7]: 0.5454545454545454
+
+    In [8]: similar("12/20/2024","2011012003")
+    Out[8]: 0.4
+
+    """
+    return SequenceMatcher(None, a, b).ratio()
+
+def close_to_similar(target: str, wordlist: str, similarity_threshold: float):
+    for word in wordlist:
+        if similar(target, word) >= similarity_threshold:
+            return True
+
+    return False
 
 
 if __name__ == '__main__':
