@@ -15,7 +15,7 @@ import os
 import sys
 from difflib import SequenceMatcher
 
-__version__ = '1.1.4'
+__version__ = '1.1.6'
 
 DISPLAY_TITLE = r"""
        _        _                             _            _  ______                              
@@ -38,6 +38,8 @@ parser.add_argument('-o', '--outputType', default='png', type=str,
                     help='output file type(only the extension)')
 parser.add_argument('-j', '--filterTextFromJSON', default='anonymizedTags.json', type=str,
                     help='A dictionary of dicom tags and their values')
+parser.add_argument('-t', '--threshold', default=0.8, type=float,
+                    help='threshold of similarity ration between two words')
 parser.add_argument(  '--pftelDB',
                     dest        = 'pftelDB',
                     default     = '',
@@ -97,7 +99,7 @@ def main(options: Namespace, inputdir: Path, outputdir: Path):
         # The code block below is a small and easy example of how to use a ``PathMapper``.
         # It is recommended that you put your functionality in a helper function, so that
         # it is more legible and can be unit tested.
-        box_list, final_image = inpaint_text(str(input_file), data, box_list)
+        box_list, final_image = inpaint_text(str(input_file), data, box_list, options.threshold)
         img_rgb = cv2.cvtColor(final_image, cv2.COLOR_BGR2RGB)
         output_file = str(output_file).replace(options.fileFilter, options.outputType)
         print(f"Saving output file as ----->{output_file}<-----\n\n")
@@ -110,7 +112,7 @@ def midpoint(x1, y1, x2, y2):
     return x_mid, y_mid
 
 
-def inpaint_text(img_path, data, box_list):
+def inpaint_text(img_path, data, box_list, similarity_threshold):
     word_list = []
     for item in data.keys():
         if item == 'PatientName':
@@ -133,7 +135,7 @@ def inpaint_text(img_path, data, box_list):
 
     mask = np.zeros(img.shape[:2], dtype="uint8")
     for box in box_list:
-        if (box[0].upper() in word_list) or close_to_similar(box[0].upper(), word_list,0.8):
+        if (box[0].upper() in word_list) or close_to_similar(box[0].upper(), word_list, similarity_threshold):
             # Remove PatientName only
             print(f"Removing {box[0].upper()} from image")
             x0, y0 = box[1][0]
