@@ -16,7 +16,7 @@ import sys
 from difflib import SequenceMatcher
 import hashlib
 
-__version__ = '1.1.7'
+__version__ = '1.1.8'
 
 DISPLAY_TITLE = r"""
        _        _                             _            _  ______                              
@@ -39,15 +39,13 @@ parser.add_argument('-o', '--outputType', default='png', type=str,
                     help='output file type(only the extension)')
 parser.add_argument('-j', '--filterTextFromJSON', default='anonymizedTags.json', type=str,
                     help='A dictionary of dicom tags and their values')
-parser.add_argument('-r', '--replaceTextFromJSON', default='replaceTags.json', type=str,
-                    help='A dictionary of dicom tags and their replacement values')
 parser.add_argument('-t', '--threshold', default=0.8, type=float,
                     help='threshold of similarity ration between two words')
-parser.add_argument(  '--pftelDB',
-                    dest        = 'pftelDB',
-                    default     = '',
-                    type        = str,
-                    help        = 'optional pftel server DB path')
+parser.add_argument('--pftelDB',
+                    dest='pftelDB',
+                    default='',
+                    type=str,
+                    help='optional pftel server DB path')
 
 
 # The main function of this *ChRIS* plugin is denoted by this ``@chris_plugin`` "decorator."
@@ -63,8 +61,8 @@ parser.add_argument(  '--pftelDB',
     min_gpu_limit=0  # set min_gpu_limit=1 to enable GPU
 )
 @pflog.tel_logTime(
-            event       = 'image_textRemove',
-            log         = 'Remove text from image'
+    event='image_textRemove',
+    log='Remove text from image'
 )
 def main(options: Namespace, inputdir: Path, outputdir: Path):
     """
@@ -86,7 +84,7 @@ def main(options: Namespace, inputdir: Path, outputdir: Path):
     #
     # Refer to the documentation for more options, examples, and advanced uses e.g.
     # adding a progress bar and parallelism.
-    json_data_path=''
+    json_data_path = ''
     l_json_path = list(inputdir.glob('**/*.json'))
     for json_path in l_json_path:
         if json_path.name == options.filterTextFromJSON:
@@ -95,25 +93,15 @@ def main(options: Namespace, inputdir: Path, outputdir: Path):
         f = open(json_data_path, 'r')
         data = json.load(f)
     except Exception as ex:
-        print("Error: ",ex)
-    # To be removed later
-    replace_json_data_path = ''
-    l_replace_json_path = list(inputdir.glob('**/*.json'))
-    for json_path in l_replace_json_path:
-        if json_path.name == options.replaceTextFromJSON:
-            replace_json_data_path = json_path
-    try:
-        f = open(replace_json_data_path, 'r')
-        replace_data = json.load(f)
-    except Exception as ex:
         print("Error: ", ex)
+
     box_list = []
     mapper = PathMapper.file_mapper(inputdir, outputdir, glob=f"**/*.{options.fileFilter}", fail_if_empty=False)
     for input_file, output_file in mapper:
         # The code block below is a small and easy example of how to use a ``PathMapper``.
         # It is recommended that you put your functionality in a helper function, so that
         # it is more legible and can be unit tested.
-        box_list, final_image = inpaint_text(str(input_file), data, replace_data, box_list, options.threshold)
+        box_list, final_image = inpaint_text(str(input_file), data, box_list, options.threshold)
         img_rgb = cv2.cvtColor(final_image, cv2.COLOR_BGR2RGB)
         output_file = str(output_file).replace(options.fileFilter, options.outputType)
         print(f"Saving output file as ----->{output_file}<-----\n\n")
@@ -126,41 +114,30 @@ def midpoint(x1, y1, x2, y2):
     return x_mid, y_mid
 
 
-def inpaint_text(img_path, data, replace_data, box_list, similarity_threshold):
+def inpaint_text(img_path, data, box_list, similarity_threshold):
     word_list = []
-    d_replace_text = {}
     for item in data.keys():
         if item == 'PatientName':
-            anon_name = replace_data.get(item).split('^')
             real_name = data.get(item).split('^')
             for i in range(len(real_name)):
                 word_list.append(real_name[i])
-                d_replace_text[real_name[i]] = anon_name[i]
         elif item == 'PatientBirthDate':
             yyyy = data.get(item)[0:4]
             mm = data.get(item)[4:6]
             dd = data.get(item)[6:8]
-            yyyy1 = replace_data.get(item)[0:4]
-            mm1 = replace_data.get(item)[4:6]
-            dd1 = replace_data.get(item)[6:8]
             word_list.append(f'{mm}1{dd}1{yyyy}')
-            d_replace_text[f'{mm}1{dd}1{yyyy}'] = f'{mm1}/{dd1}/{yyyy1}'
         else:
             word_list.append(data.get(item))
-            d_replace_text[data.get(item)] = replace_data.get(item)
-    print(d_replace_text)
     # read image
     print(f"Reading input file from ---->{img_path}<----")
-    img = cv2.imread(img_path)
+    img = cv2.imread(img_path, cv2.COLOR_BGR2RGB)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     if not len(box_list):
         pipeline = keras_ocr.pipeline.Pipeline()
         # # generate (word, box) tuples
         box_list = pipeline.recognize([img])[0]
 
-
     mask = np.zeros(img.shape[:2], dtype="uint8")
-    l_coordinates = []
-    l_text = []
     for box in box_list:
         if (box[0].upper() in word_list) or close_to_similar(box[0].upper(), word_list, similarity_threshold):
             print(f"Removing {box[0].upper()} from image")
@@ -175,32 +152,11 @@ def inpaint_text(img_path, data, replace_data, box_list, similarity_threshold):
             thickness = int(math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2))
 
             cv2.line(mask, (x_mid0, y_mid0), (x_mid1, y_mi1), 255,
-                 thickness)
+                     thickness)
             img = cv2.inpaint(img, mask, 7, cv2.INPAINT_NS)
-            org = (round(x3),round(y3))
-            l_coordinates.append(org)
-            if box[0].upper() in d_replace_text:
-                l_text.append(d_replace_text[box[0].upper()])
-            else:
-                word = close_to_similar(box[0].upper(), word_list, similarity_threshold)
-                l_text.append(d_replace_text[word])
-
-    color = (235, 235, 235)
-    print(l_text)
-    for org,text in zip(l_coordinates,l_text):
-        #text = generate_hash_text(text)
-        img = cv2.putText(img, text, org, cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
 
     return box_list, img
 
-def generate_hash_text(input_text: str) -> str:
-    """
-    Given an input text, generate a md5 hash and
-    return a hashed text of the original text's length
-    """
-    result = hashlib.md5(input_text.encode())
-
-    return result.hexdigest()[0:len(input_text)].upper()
 
 def read_input_dicom(input_file_path):
     """
@@ -238,6 +194,7 @@ def similar(a: str, b: str):
 
     """
     return SequenceMatcher(None, a, b).ratio()
+
 
 def close_to_similar(target: str, wordlist: str, similarity_threshold: float):
     for word in wordlist:
