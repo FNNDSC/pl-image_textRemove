@@ -16,7 +16,7 @@ import sys
 from difflib import SequenceMatcher
 import hashlib
 
-__version__ = '1.1.8'
+__version__ = '1.2.0'
 
 DISPLAY_TITLE = r"""
        _        _                             _            _  ______                              
@@ -121,7 +121,7 @@ def inpaint_text(img_path, data, box_list, similarity_threshold):
             real_name = data.get(item).split('^')
             for i in range(len(real_name)):
                 word_list.append(real_name[i])
-        elif item == 'PatientBirthDate':
+        elif 'Date' in item:
             yyyy = data.get(item)[0:4]
             mm = data.get(item)[4:6]
             dd = data.get(item)[6:8]
