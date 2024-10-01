@@ -16,7 +16,7 @@ import sys
 from difflib import SequenceMatcher
 import hashlib
 
-__version__ = '1.2.0'
+__version__ = '1.2.1'
 
 DISPLAY_TITLE = r"""
        _        _                             _            _  ______                              

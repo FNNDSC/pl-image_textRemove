@@ -173,6 +173,17 @@ jobs:
           jq < /tmp/description.json  # pretty print in log
           echo "title=$(jq -r '.title' < /tmp/description.json)" >> $GITHUB_OUTPUT
 
+      - name: Upload ChRIS Plugin
+        id: upload
+        if: github.ref_type == 'tag'
+        uses: FNNDSC/upload-chris-plugin@v1
+        with:
+          dock_image: ${{ steps.info.outputs.local_tag }}
+          username: ${{ secrets.CHRISPROJECT_USERNAME }}
+          password: ${{ secrets.CHRISPROJECT_PASSWORD }}
+          chris_url: https://cube.chrisproject.org/api/v1/
+          compute_names: NERC
+
       - name: Update DockerHub description
         uses: peter-evans/dockerhub-description@v3
         continue-on-error: true  # it is not crucial that this works

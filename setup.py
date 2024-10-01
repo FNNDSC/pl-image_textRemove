@@ -24,7 +24,7 @@ setup(
     description='A ChRIS plugin to remove text from images',
     author='FNNDSC',
     author_email='dev@babyMRI.org',
-    url='https://github.com/FNNDSC/pl-image_textRe',
+    url='https://github.com/FNNDSC/pl-image_textRemove',
     py_modules=['image_textRemove'],
     install_requires=['chris_plugin'],
     license='MIT',
