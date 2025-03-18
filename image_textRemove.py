@@ -15,8 +15,9 @@ import os
 import sys
 from difflib import SequenceMatcher
 import hashlib
+import itertools
 
-__version__ = '1.2.3'
+__version__ = '1.2.4'
 
 DISPLAY_TITLE = r"""
        _        _                             _            _  ______                              
@@ -84,31 +85,41 @@ def main(options: Namespace, inputdir: Path, outputdir: Path):
     #
     # Refer to the documentation for more options, examples, and advanced uses e.g.
     # adding a progress bar and parallelism.
+    pipeline = keras_ocr.pipeline.Pipeline()
     json_data_path = ''
     data = {}
+    l_tag_dir_path = []
+    l_img_dir_path = set()
     l_json_path = list(inputdir.glob('**/*.json'))
     for json_path in l_json_path:
         if json_path.name == options.filterTextFromJSON:
             json_data_path = json_path
-            print(json_path)
-    try:
-        f = open(json_data_path, 'r')
-        data = json.load(f)
-    except Exception as ex:
-        print("Error: ", ex)
+            path = Path(json_data_path)
+            l_tag_dir_path.append(path.parent.absolute())
+    l_img_path = list(inputdir.glob(f"**/*.{options.fileFilter}"))
+    for img_path in l_img_path:
+        path = Path(img_path)
+        l_img_dir_path.add(path.parent.absolute())
 
-    box_list = []
-    mapper = PathMapper.file_mapper(inputdir, outputdir, glob=f"**/*.{options.fileFilter}", fail_if_empty=False)
-    for input_file, output_file in mapper:
-        print(data)
-        # The code block below is a small and easy example of how to use a ``PathMapper``.
-        # It is recommended that you put your functionality in a helper function, so that
-        # it is more legible and can be unit tested.
-        box_list, final_image = inpaint_text(str(input_file), data, box_list, options.threshold)
-        img_rgb = cv2.cvtColor(final_image, cv2.COLOR_BGR2RGB)
-        output_file = str(output_file).replace(options.fileFilter, options.outputType)
-        print(f"Saving output file as ----->{output_file}<-----\n\n")
-        cv2.imwrite(output_file, img_rgb)
+    result = [(x,y) for x,y in itertools.product(l_tag_dir_path, l_img_dir_path) if str(x).split('/')[-1] == str(y).split('/')[-1]]
+
+    for tag_dir,image_dir in result:
+        json_data_path = os.path.join(tag_dir,options.filterTextFromJSON)
+        try:
+            f = open(json_data_path, 'r')
+            data = json.load(f)
+        except Exception as ex:
+            print("Error: ", ex)
+
+        box_list = []
+        mapper = PathMapper.file_mapper(image_dir, outputdir, glob=f"**/*.{options.fileFilter}", fail_if_empty=False)
+        for input_file, output_file in mapper:
+
+            box_list, final_image = inpaint_text(str(input_file), data, box_list, options.threshold, pipeline)
+            img_rgb = cv2.cvtColor(final_image, cv2.COLOR_BGR2RGB)
+            output_file = str(output_file).replace(options.fileFilter, options.outputType)
+            print(f"Saving output file as ----->{output_file}<-----\n\n")
+            cv2.imwrite(output_file, img_rgb)
 
 
 def midpoint(x1, y1, x2, y2):
@@ -117,7 +128,7 @@ def midpoint(x1, y1, x2, y2):
     return x_mid, y_mid
 
 
-def inpaint_text(img_path, data, box_list, similarity_threshold):
+def inpaint_text(img_path, data, box_list, similarity_threshold, pipeline):
     word_list = []
     for item in data.keys():
         if item == 'PatientName':
@@ -136,7 +147,7 @@ def inpaint_text(img_path, data, box_list, similarity_threshold):
     img = cv2.imread(img_path, cv2.COLOR_BGR2RGB)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     if not len(box_list):
-        pipeline = keras_ocr.pipeline.Pipeline()
+
         # # generate (word, box) tuples
         box_list = pipeline.recognize([img])[0]
 
