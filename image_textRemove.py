@@ -17,7 +17,7 @@ from difflib import SequenceMatcher
 import hashlib
 import itertools
 
-__version__ = '1.2.4'
+__version__ = '1.2.5'
 
 DISPLAY_TITLE = r"""
        _        _                             _            _  ______                              
@@ -117,9 +117,16 @@ def main(options: Namespace, inputdir: Path, outputdir: Path):
 
             box_list, final_image = inpaint_text(str(input_file), data, box_list, options.threshold, pipeline)
             img_rgb = cv2.cvtColor(final_image, cv2.COLOR_BGR2RGB)
-            output_file = str(output_file).replace(options.fileFilter, options.outputType)
-            print(f"Saving output file as ----->{output_file}<-----\n\n")
-            cv2.imwrite(output_file, img_rgb)
+            output_file_path = os.path.join(outputdir,str(image_dir).split('/')[-1],str(output_file).split('/')[-1])
+            output_file_path = str(output_file_path).replace(options.fileFilter, options.outputType)
+            # Extract the directory path from the filename
+            directory = os.path.dirname(output_file_path)
+
+            # Create the directory if it doesn't exist
+            if directory:
+                os.makedirs(directory, exist_ok=True)
+            print(f"Saving output file as ----->{output_file_path}<-----\n\n")
+            cv2.imwrite(output_file_path, img_rgb)
 
 
 def midpoint(x1, y1, x2, y2):
