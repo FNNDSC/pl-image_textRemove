@@ -1,6 +1,7 @@
 chris_plugin>=0.3.0
-opencv-python
+opencv-python==4.11.0.86
 pflog==1.2.26
 pftel-client~=1.0.6
-keras-ocr==0.8.8
-tensorflow-cpu==2.17.0
+keras-ocr==0.9.3
+# tensorflow-cpu==2.17.0
+tensorflow==2.15

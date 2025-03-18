@@ -85,10 +85,12 @@ def main(options: Namespace, inputdir: Path, outputdir: Path):
     # Refer to the documentation for more options, examples, and advanced uses e.g.
     # adding a progress bar and parallelism.
     json_data_path = ''
+    data = {}
     l_json_path = list(inputdir.glob('**/*.json'))
     for json_path in l_json_path:
         if json_path.name == options.filterTextFromJSON:
             json_data_path = json_path
+            print(json_path)
     try:
         f = open(json_data_path, 'r')
         data = json.load(f)
@@ -98,6 +100,7 @@ def main(options: Namespace, inputdir: Path, outputdir: Path):
     box_list = []
     mapper = PathMapper.file_mapper(inputdir, outputdir, glob=f"**/*.{options.fileFilter}", fail_if_empty=False)
     for input_file, output_file in mapper:
+        print(data)
         # The code block below is a small and easy example of how to use a ``PathMapper``.
         # It is recommended that you put your functionality in a helper function, so that
         # it is more legible and can be unit tested.
