@@ -17,7 +17,7 @@ from difflib import SequenceMatcher
 import hashlib
 import itertools
 
-__version__ = '1.2.5'
+__version__ = '1.2.6'
 
 DISPLAY_TITLE = r"""
        _        _                             _            _  ______                              
@@ -58,7 +58,7 @@ parser.add_argument('--pftelDB',
     title='Remove text from image',
     category='',  # ref. https://chrisstore.co/plugins
     min_memory_limit='4Gi',  # supported units: Mi, Gi
-    min_cpu_limit='8000m',  # millicores, e.g. "1000m" = 1 CPU core
+    min_cpu_limit='2000m',  # millicores, e.g. "1000m" = 1 CPU core
     min_gpu_limit=0  # set min_gpu_limit=1 to enable GPU
 )
 @pflog.tel_logTime(
