@@ -20,6 +20,12 @@ ENV EASY_OCR_MODEL_DIR=/opt/easyocr
 # Create model directory with open permissions
 RUN mkdir -p /opt/easyocr && chmod -R a+rX /opt/easyocr
 
+# Copy your preload script into the container
+COPY preload_model.py .
+
+# Preload easyocr models
+RUN python preload_model.py
+
 COPY . .
 ARG extras_require=none
 

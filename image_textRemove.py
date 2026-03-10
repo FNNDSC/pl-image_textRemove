@@ -6,7 +6,7 @@ import cv2
 import math
 import numpy as np
 from chris_plugin import chris_plugin, PathMapper
-import keras_ocr
+# import keras_ocr
 import glob
 import json
 import math
@@ -17,6 +17,12 @@ import hashlib
 import itertools
 import regex
 import easyocr
+import logging
+
+# supress ocr noise
+logging.getLogger('easyocr').setLevel(logging.ERROR)
+
+os.environ["TORCH_USE_NNPACK"] = "0"
 
 pattern = regex.compile(
     r"""
@@ -77,7 +83,7 @@ pattern = regex.compile(
     regex.VERBOSE | regex.IGNORECASE
 )
 
-__version__ = '1.2.7'
+__version__ = '1.2.8'
 
 DISPLAY_TITLE = r"""
        _        _                             _            _  ______                              
@@ -141,6 +147,7 @@ def main(options: Namespace, inputdir: Path, outputdir: Path):
     # Create a reader for specific languages
     pipeline = easyocr.Reader(['en'],
                             model_storage_directory='/opt/easyocr',
+                            download_enabled=False,
                             quantize=True,
                             verbose=False)  # ['en', 'fr', 'de', ...]
     #pipeline = keras_ocr.pipeline.Pipeline()
@@ -210,7 +217,7 @@ def inpaint_text(img_path, data, similarity_threshold, pipeline):
         else:
             word_list.append(data.get(item))
 
-    print(word_list)
+    # print(word_list)
     # read image
     print(f"Reading input file from ---->{img_path}<----")
     img = cv2.imread(img_path, cv2.COLOR_BGR2RGB)
