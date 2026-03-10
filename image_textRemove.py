@@ -6,7 +6,6 @@ import cv2
 import math
 import numpy as np
 from chris_plugin import chris_plugin, PathMapper
-from pflog import pflog
 import keras_ocr
 import glob
 import json
@@ -16,8 +15,69 @@ import sys
 from difflib import SequenceMatcher
 import hashlib
 import itertools
+import regex
+import easyocr
 
-__version__ = '1.2.6'
+pattern = regex.compile(
+    r"""
+    (                                       # ---- ANY PHI MATCH ----
+
+        # 1️⃣ Name: Lastname, Firstname or Initial
+        \b
+        \p{L}[\p{L}.'’\- ]*(?:\s+\p{L}\.?)?
+        \p{L}[\p{L}'’\-]*
+        (?:[ -]\p{L}[\p{L}'’\-]*)*
+        ,\s*
+        (
+            \p{L}[\p{L}.'’\- ]*      # Full first name
+            |
+            \p{L}\.?                 # Initial (J or J.)
+        )
+        \b
+
+        |
+
+        # 2️⃣ Any Date (many formats)
+        \b
+        (?:
+            \d{1,2}[-/]\d{1,2}[-/]\d{2,4}
+            |
+            \d{4}[-/]\d{1,2}[-/]\d{1,2}
+            |
+            (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+
+            \d{1,2},?\s+\d{4}
+        )
+        \b
+
+        |
+
+        # 3️⃣ MRN
+        \b
+        (?:
+        
+            (?:MRN|Medical\s*Record\s*Number|Patient\s*ID|ID)[:#\s]*[A-Z0-9]{5,15}
+            |
+            \d{5,12}
+        )
+        \b
+
+        |
+
+        # 4️⃣ Accession Number
+        \b
+        (?:
+            (?:Accession|Accession\s*Number|ACC)
+            [:#\s]*
+            [A-Z0-9\-]{6,20}
+        )
+        \b
+
+    )
+    """,
+    regex.VERBOSE | regex.IGNORECASE
+)
+
+__version__ = '1.2.7'
 
 DISPLAY_TITLE = r"""
        _        _                             _            _  ______                              
@@ -61,10 +121,6 @@ parser.add_argument('--pftelDB',
     min_cpu_limit='2000m',  # millicores, e.g. "1000m" = 1 CPU core
     min_gpu_limit=0  # set min_gpu_limit=1 to enable GPU
 )
-@pflog.tel_logTime(
-    event='image_textRemove',
-    log='Remove text from image'
-)
 def main(options: Namespace, inputdir: Path, outputdir: Path):
     """
     *ChRIS* plugins usually have two positional arguments: an **input directory** containing
@@ -78,28 +134,33 @@ def main(options: Namespace, inputdir: Path, outputdir: Path):
 
     print(DISPLAY_TITLE)
 
-    # Typically it's easier to think of programs as operating on individual files
-    # rather than directories. The helper functions provided by a ``PathMapper``
-    # object make it easy to discover input files and write to output files inside
-    # the given paths.
-    #
-    # Refer to the documentation for more options, examples, and advanced uses e.g.
-    # adding a progress bar and parallelism.
-    pipeline = keras_ocr.pipeline.Pipeline()
+    # STEPS OF PHI REMOVAL
+    # 1) Initialize OCR pipeline - initializing pipeline at this stage ensures only a single instance is used.
+    # 2) Create a map of individual image files along with a JSON file containing a tag-value information.
+    # 3) Zip both the JSON and image directories
+    # Create a reader for specific languages
+    pipeline = easyocr.Reader(['en'],
+                            model_storage_directory='/opt/easyocr',
+                            quantize=True,
+                            verbose=False)  # ['en', 'fr', 'de', ...]
+    #pipeline = keras_ocr.pipeline.Pipeline()
     json_data_path = ''
     data = {}
     l_tag_dir_path = []
     l_img_dir_path = set()
     l_json_path = list(inputdir.glob('**/*.json'))
+
     for json_path in l_json_path:
         if json_path.name == options.filterTextFromJSON:
             json_data_path = json_path
             path = Path(json_data_path)
             l_tag_dir_path.append(path.parent.absolute())
+
     l_img_path = list(inputdir.glob(f"**/*.{options.fileFilter}"))
     for img_path in l_img_path:
         path = Path(img_path)
         l_img_dir_path.add(path.parent.absolute())
+
 
     result = [(x,y) for x,y in itertools.product(l_tag_dir_path, l_img_dir_path) if str(x).split('/')[-1] == str(y).split('/')[-1]]
 
@@ -111,11 +172,10 @@ def main(options: Namespace, inputdir: Path, outputdir: Path):
         except Exception as ex:
             print("Error: ", ex)
 
-        box_list = []
         mapper = PathMapper.file_mapper(image_dir, outputdir, glob=f"**/*.{options.fileFilter}", fail_if_empty=False)
         for input_file, output_file in mapper:
 
-            box_list, final_image = inpaint_text(str(input_file), data, box_list, options.threshold, pipeline)
+            final_image = inpaint_text(str(input_file), data, options.threshold, pipeline)
             img_rgb = cv2.cvtColor(final_image, cv2.COLOR_BGR2RGB)
             output_file_path = os.path.join(outputdir,str(image_dir).split('/')[-1],str(output_file).split('/')[-1])
             output_file_path = str(output_file_path).replace(options.fileFilter, options.outputType)
@@ -135,7 +195,7 @@ def midpoint(x1, y1, x2, y2):
     return x_mid, y_mid
 
 
-def inpaint_text(img_path, data, box_list, similarity_threshold, pipeline):
+def inpaint_text(img_path, data, similarity_threshold, pipeline):
     word_list = []
     for item in data.keys():
         if item == 'PatientName':
@@ -149,23 +209,28 @@ def inpaint_text(img_path, data, box_list, similarity_threshold, pipeline):
             word_list.append(f'{mm}1{dd}1{yyyy}')
         else:
             word_list.append(data.get(item))
+
+    print(word_list)
     # read image
     print(f"Reading input file from ---->{img_path}<----")
     img = cv2.imread(img_path, cv2.COLOR_BGR2RGB)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    if not len(box_list):
+    # if not len(box_list):
 
-        # # generate (word, box) tuples
-        box_list = pipeline.recognize([img])[0]
+    # # generate (word, box) tuples
+    #box_list = pipeline.recognize([img])[0]
+    box_list = pipeline.readtext(img)
 
-    mask = np.zeros(img.shape[:2], dtype="uint8")
+    #mask = np.zeros(img.shape[:2], dtype="uint8")
     for box in box_list:
-        if (box[0].upper() in word_list) or close_to_similar(box[0].upper(), word_list, similarity_threshold):
-            print(f"Removing {box[0].upper()} from image")
-            x0, y0 = box[1][0]
-            x1, y1 = box[1][1]
-            x2, y2 = box[1][2]
-            x3, y3 = box[1][3]
+        mask = np.zeros(img.shape[:2], dtype="uint8")
+        if (box[1].upper() in word_list) or close_to_similar(box[1].upper(), word_list, similarity_threshold)\
+                or pattern.fullmatch(box[1].upper()):
+            print(f"Removing {box[1].upper()} from image")
+            x0, y0 = box[0][0]
+            x1, y1 = box[0][1]
+            x2, y2 = box[0][2]
+            x3, y3 = box[0][3]
 
             x_mid0, y_mid0 = midpoint(x1, y1, x2, y2)
             x_mid1, y_mi1 = midpoint(x0, y0, x3, y3)
@@ -176,7 +241,7 @@ def inpaint_text(img_path, data, box_list, similarity_threshold, pipeline):
                      thickness)
             img = cv2.inpaint(img, mask, 7, cv2.INPAINT_NS)
 
-    return box_list, img
+    return img
 
 
 def read_input_dicom(input_file_path):

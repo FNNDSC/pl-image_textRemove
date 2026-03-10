@@ -14,6 +14,11 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 RUN apt-get update
 RUN apt-get install ffmpeg libsm6 libxext6  -y
+# EasyOCR model cache location
+ENV EASY_OCR_MODEL_DIR=/opt/easyocr
+
+# Create model directory with open permissions
+RUN mkdir -p /opt/easyocr && chmod -R a+rX /opt/easyocr
 
 COPY . .
 ARG extras_require=none
