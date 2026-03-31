@@ -3,10 +3,9 @@
 from pathlib import Path
 from argparse import ArgumentParser, Namespace, ArgumentDefaultsHelpFormatter
 import cv2
-import math
 import numpy as np
 from chris_plugin import chris_plugin, PathMapper
-# import keras_ocr
+import keras_ocr
 import glob
 import json
 import math
@@ -16,11 +15,11 @@ from difflib import SequenceMatcher
 import hashlib
 import itertools
 import regex
-import easyocr
+#import easyocr
 import logging
 
 # supress ocr noise
-logging.getLogger('easyocr').setLevel(logging.ERROR)
+#logging.getLogger('easyocr').setLevel(logging.ERROR)
 
 os.environ["TORCH_USE_NNPACK"] = "0"
 
@@ -83,7 +82,7 @@ pattern = regex.compile(
     regex.VERBOSE | regex.IGNORECASE
 )
 
-__version__ = '1.2.8'
+__version__ = '1.2.9'
 
 DISPLAY_TITLE = r"""
        _        _                             _            _  ______                              
@@ -145,12 +144,14 @@ def main(options: Namespace, inputdir: Path, outputdir: Path):
     # 2) Create a map of individual image files along with a JSON file containing a tag-value information.
     # 3) Zip both the JSON and image directories
     # Create a reader for specific languages
+    """
     pipeline = easyocr.Reader(['en'],
                             model_storage_directory='/opt/easyocr',
                             download_enabled=False,
                             quantize=True,
                             verbose=False)  # ['en', 'fr', 'de', ...]
-    #pipeline = keras_ocr.pipeline.Pipeline()
+    """
+    pipeline = keras_ocr.pipeline.Pipeline()
     json_data_path = ''
     data = {}
     l_tag_dir_path = []
@@ -225,19 +226,19 @@ def inpaint_text(img_path, data, similarity_threshold, pipeline):
     # if not len(box_list):
 
     # # generate (word, box) tuples
-    #box_list = pipeline.recognize([img])[0]
-    box_list = pipeline.readtext(img)
+    box_list = pipeline.recognize([img])[0]
+    #box_list = pipeline.readtext(img)
 
     #mask = np.zeros(img.shape[:2], dtype="uint8")
     for box in box_list:
         mask = np.zeros(img.shape[:2], dtype="uint8")
-        if (box[1].upper() in word_list) or close_to_similar(box[1].upper(), word_list, similarity_threshold)\
-                or pattern.fullmatch(box[1].upper()):
-            print(f"Removing {box[1].upper()} from image")
-            x0, y0 = box[0][0]
-            x1, y1 = box[0][1]
-            x2, y2 = box[0][2]
-            x3, y3 = box[0][3]
+        if (box[0].upper() in word_list) or close_to_similar(box[0].upper(), word_list, similarity_threshold)\
+                or pattern.fullmatch(box[0].upper()):
+            print(f"Removing {box[0].upper()} from image")
+            x0, y0 = box[1][0]
+            x1, y1 = box[1][1]
+            x2, y2 = box[1][2]
+            x3, y3 = box[1][3]
 
             x_mid0, y_mid0 = midpoint(x1, y1, x2, y2)
             x_mid1, y_mi1 = midpoint(x0, y0, x3, y3)

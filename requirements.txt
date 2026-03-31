@@ -1,7 +1,7 @@
 chris_plugin>=0.3.0
 opencv-python==4.11.0.86
-# keras-ocr==0.9.3
+keras-ocr==0.9.3
 # tensorflow-cpu==2.19.0
 tensorflow==2.15
 regex
-easyocr
+#easyocr
