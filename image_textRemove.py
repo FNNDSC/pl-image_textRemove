@@ -5,7 +5,7 @@ from argparse import ArgumentParser, Namespace, ArgumentDefaultsHelpFormatter
 import cv2
 import numpy as np
 from chris_plugin import chris_plugin, PathMapper
-import keras_ocr
+# import keras_ocr
 import glob
 import json
 import math
@@ -15,11 +15,11 @@ from difflib import SequenceMatcher
 import hashlib
 import itertools
 import regex
-#import easyocr
+import easyocr
 import logging
 
 # supress ocr noise
-#logging.getLogger('easyocr').setLevel(logging.ERROR)
+logging.getLogger('easyocr').setLevel(logging.ERROR)
 
 os.environ["TORCH_USE_NNPACK"] = "0"
 
@@ -82,7 +82,7 @@ pattern = regex.compile(
     regex.VERBOSE | regex.IGNORECASE
 )
 
-__version__ = '1.2.9'
+__version__ = '1.3.0'
 
 DISPLAY_TITLE = r"""
        _        _                             _            _  ______                              
@@ -107,6 +107,8 @@ parser.add_argument('-j', '--filterTextFromJSON', default='anonymizedTags.json',
                     help='A dictionary of dicom tags and their values')
 parser.add_argument('-t', '--threshold', default=0.8, type=float,
                     help='threshold of similarity ration between two words')
+parser.add_argument('-s', '--singleImageMode', default=False, action="store_true",
+                    help='If set true, run OCR on each individual image')
 parser.add_argument('--pftelDB',
                     dest='pftelDB',
                     default='',
@@ -144,14 +146,13 @@ def main(options: Namespace, inputdir: Path, outputdir: Path):
     # 2) Create a map of individual image files along with a JSON file containing a tag-value information.
     # 3) Zip both the JSON and image directories
     # Create a reader for specific languages
-    """
     pipeline = easyocr.Reader(['en'],
                             model_storage_directory='/opt/easyocr',
                             download_enabled=False,
                             quantize=True,
                             verbose=False)  # ['en', 'fr', 'de', ...]
-    """
-    pipeline = keras_ocr.pipeline.Pipeline()
+
+    #pipeline = keras_ocr.pipeline.Pipeline()
     json_data_path = ''
     data = {}
     l_tag_dir_path = []
@@ -181,9 +182,10 @@ def main(options: Namespace, inputdir: Path, outputdir: Path):
             print("Error: ", ex)
 
         mapper = PathMapper.file_mapper(image_dir, outputdir, glob=f"**/*.{options.fileFilter}", fail_if_empty=False)
+        box_list = []
+        singleImageMode = options.singleImageMode
         for input_file, output_file in mapper:
-
-            final_image = inpaint_text(str(input_file), data, options.threshold, pipeline)
+            final_image, box_list = inpaint_text(str(input_file), data, options.threshold, pipeline, box_list, singleImageMode)
             img_rgb = cv2.cvtColor(final_image, cv2.COLOR_BGR2RGB)
             output_file_path = os.path.join(outputdir,str(image_dir).split('/')[-1],str(output_file).split('/')[-1])
             output_file_path = str(output_file_path).replace(options.fileFilter, options.outputType)
@@ -203,7 +205,7 @@ def midpoint(x1, y1, x2, y2):
     return x_mid, y_mid
 
 
-def inpaint_text(img_path, data, similarity_threshold, pipeline):
+def inpaint_text(img_path, data, similarity_threshold, pipeline, box_list, singleImageMode):
     word_list = []
     for item in data.keys():
         if item == 'PatientName':
@@ -223,22 +225,24 @@ def inpaint_text(img_path, data, similarity_threshold, pipeline):
     print(f"Reading input file from ---->{img_path}<----")
     img = cv2.imread(img_path, cv2.COLOR_BGR2RGB)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    # if not len(box_list):
+    if not len(box_list) or singleImageMode:
+        print(f"Running OCR on input file {img_path}<----")
+        box_list = pipeline.readtext(img)
 
     # # generate (word, box) tuples
-    box_list = pipeline.recognize([img])[0]
-    #box_list = pipeline.readtext(img)
+    #box_list = pipeline.recognize([img])[0]
+
 
     #mask = np.zeros(img.shape[:2], dtype="uint8")
     for box in box_list:
         mask = np.zeros(img.shape[:2], dtype="uint8")
-        if (box[0].upper() in word_list) or close_to_similar(box[0].upper(), word_list, similarity_threshold)\
-                or pattern.fullmatch(box[0].upper()):
-            print(f"Removing {box[0].upper()} from image")
-            x0, y0 = box[1][0]
-            x1, y1 = box[1][1]
-            x2, y2 = box[1][2]
-            x3, y3 = box[1][3]
+        if (box[1].upper() in word_list) or close_to_similar(box[1].upper(), word_list, similarity_threshold)\
+                or pattern.fullmatch(box[1].upper()):
+            print(f"Removing {box[1].upper()} from image")
+            x0, y0 = box[0][0]
+            x1, y1 = box[0][1]
+            x2, y2 = box[0][2]
+            x3, y3 = box[0][3]
 
             x_mid0, y_mid0 = midpoint(x1, y1, x2, y2)
             x_mid1, y_mi1 = midpoint(x0, y0, x3, y3)
@@ -249,7 +253,7 @@ def inpaint_text(img_path, data, similarity_threshold, pipeline):
                      thickness)
             img = cv2.inpaint(img, mask, 7, cv2.INPAINT_NS)
 
-    return img
+    return img, box_list
 
 
 def read_input_dicom(input_file_path):
